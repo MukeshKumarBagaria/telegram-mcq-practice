@@ -1,11 +1,26 @@
+const express = require('express');
 const { Telegraf } = require('telegraf');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
 
+// Initialize express app
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Initialize bot
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+// Basic route for health check
+app.get('/', (req, res) => {
+  res.send('Bot is running!');
+});
+
+// Webhook route for Telegram
+app.use(bot.webhookCallback('/webhook'));
+
+// Your existing bot code
 bot.start((ctx) => ctx.reply('Send me a topic to generate MCQs in poll format.'));
 
 bot.on('text', async (ctx) => {
@@ -52,7 +67,7 @@ bot.on('text', async (ctx) => {
   }
 });
 
-// Improved parsing function
+// Your existing parseMCQs function
 function parseMCQs(mcqText) {
   const questions = [];
   const lines = mcqText.split('\n').filter(line => line.trim() !== '');
@@ -62,13 +77,11 @@ function parseMCQs(mcqText) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
-    // Match questions with or without asterisks/numbers
     if (line.match(/^\d+\.|^\*\*\d+\./)) {
       if (currentQuestion && currentQuestion.options.length > 0) {
         questions.push(currentQuestion);
       }
       
-      // Clean up question text by removing asterisks, numbers, and extra spaces
       const questionText = line.replace(/^\d+\.\s*\*\*|\*\*$|^\*\*|\d+\.\s*/g, '').trim();
       currentQuestion = {
         question: questionText,
@@ -76,26 +89,23 @@ function parseMCQs(mcqText) {
         answerIndex: null
       };
     }
-    // Match options
     else if (line.match(/^[a-d]\)/)) {
       if (currentQuestion) {
         const optionText = line.replace(/^[a-d]\)\s*/, '').trim();
         currentQuestion.options.push(optionText);
       }
     }
-    // Match answer
     else if (line.match(/^Answer:|^\*\*Answer:/i)) {
       if (currentQuestion) {
         const answerMatch = line.match(/[a-d](?:\*\*)?$/);
         if (answerMatch) {
-          const answer = answerMatch[0].replace(/\*\*/g, '');
+          const answer = answerMatch[0].replace(/\*\*$/g, '');
           currentQuestion.answerIndex = ['a', 'b', 'c', 'd'].indexOf(answer.toLowerCase());
         }
       }
     }
   }
   
-  // Add the last question if it exists
   if (currentQuestion && currentQuestion.options.length > 0) {
     questions.push(currentQuestion);
   }
@@ -103,8 +113,20 @@ function parseMCQs(mcqText) {
   return questions;
 }
 
-bot.catch((err) => {
-  console.error('bot Error:', err);
+// Set webhook in production, use polling in development
+if (process.env.NODE_ENV === 'production') {
+  // Set the webhook
+  bot.telegram.setWebhook(`${process.env.RENDER_EXTERNAL_URL}/webhook`);
+} else {
+  // Start bot with polling in development
+  bot.launch();
+}
+
+// Start express server
+app.listen(port, () => {
+  console.log(`Bot server is running on port ${port}`);
 });
 
-bot.launch();
+// Enable graceful stop
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
