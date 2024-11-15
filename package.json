@@ -1,0 +1,21 @@
+{
+  "name": "telegram-mcq-bot",
+  "version": "1.0.0",
+  "description": "Telegram MCQ Bot with Gemini AI",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js",
+    "dev": "nodemon src/bot.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.15.3",
+    "@google/generative-ai": "^0.1.3",
+    "dotenv": "^16.4.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
