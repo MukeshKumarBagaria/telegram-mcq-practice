@@ -10,7 +10,7 @@ const port = process.env.PORT || 3000;
 // Initialize bot
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
 // Basic route for health check
 app.get('/', (req, res) => {
